@@ -230,14 +230,48 @@ def get_user_rental_stats(user_id: int, db: Session = Depends(get_db)):
 
 # ✅ 6. 대여 연장
 @router.put("/{rental_id}/extend")
-def extend_rental(rental_id: int, db: Session = Depends(get_db)):
+def extend_rental(
+    rental_id: int,
+    days: int = 1,
+    db: Session = Depends(get_db)
+):
     rental = db.query(Rental).filter(Rental.id == rental_id).first()
     if not rental:
         raise HTTPException(status_code=404, detail="대여 기록을 찾을 수 없습니다.")
     if rental.is_returned:
         raise HTTPException(status_code=400, detail="이미 반납된 대여입니다.")
 
-    rental.end_time += timedelta(days=1)
+    item = db.query(Item).filter(Item.id == rental.item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다.")
+
+    user = db.query(User).filter(User.id == rental.borrower_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+    # 단가 계산 (시간당 가격)
+    if item.unit == "per_day":
+        price_per_hour = item.price_per_day / 24
+    else:
+        price_per_hour = item.price_per_day
+
+    extension_hours = days * 24
+    extension_cost = int(price_per_hour * extension_hours)
+
+    if user.point < extension_cost:
+        raise HTTPException(status_code=400, detail="포인트가 부족합니다.")
+
+    user.point -= extension_cost
+    rental.end_time += timedelta(days=days)
+
     db.commit()
     db.refresh(rental)
-    return rental 
+    db.refresh(user)
+
+    return {
+        "rental_id": rental.id,
+        "extended_days": days,
+        "deducted_point": extension_cost,
+        "user_point": user.point,
+        "new_end_time": rental.end_time.isoformat(),
+    }
