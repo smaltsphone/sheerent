@@ -52,9 +52,9 @@ class Rental(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     is_returned = Column(Boolean, default=False)
-    deposit_amount = Column(Integer, default=0)
     damage_reported = Column(Boolean, default=False)
     deducted_amount = Column(Integer, default=0)
+    has_insurance = Column(Boolean, default=False)
 
     item = relationship("Item", back_populates="rentals")
 

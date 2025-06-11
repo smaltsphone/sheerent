@@ -33,7 +33,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
       loading = true;
     });
 
-    final url = Uri.parse("$baseUrl/rentals?is_returned=false");
+    final url = Uri.parse(
+        "$baseUrl/rentals?is_returned=false&borrower_id=$loggedInUserId");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -351,9 +352,19 @@ class _ReturnScreenState extends State<ReturnScreen> {
                     final endTime = DateTime.parse(rental['end_time']);
                     final now = DateTime.now();
                     final remaining = endTime.difference(now);
-                    final remainingText = remaining.isNegative
-                        ? "⛔ 연체됨"
-                        : "⏰ ${remaining.inHours}시간 ${remaining.inMinutes.remainder(60)}분 남음";
+                    String remainingText;
+                    if (remaining.isNegative) {
+                      final overdue = now.difference(endTime);
+                      final itemPrice = item['price_per_day'] ?? 0;
+                      final overdueDays = (overdue.inHours / 24).ceil();
+                      final overdueFee = itemPrice * overdueDays;
+                      final penalty = (overdueFee * 0.1).round();
+                      remainingText =
+                          '⛔ ${overdue.inHours}시간 연체\n연체비용 ${formatter.format(overdueFee)}원 + 벌금 ${formatter.format(penalty)}원';
+                    } else {
+                      remainingText =
+                          '⏰ ${remaining.inHours}시간 ${remaining.inMinutes.remainder(60)}분 남음';
+                    }
 
                     final beforeImageUrl =
                         "$baseUrl/static/images/item_$itemId/before.jpg";
