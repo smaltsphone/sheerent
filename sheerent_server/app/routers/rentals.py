@@ -13,6 +13,7 @@ from app.routers.ai import is_item_damaged
 
 router = APIRouter(tags=["rentals"])
 
+
 # DB 세션 의존성
 def get_db():
     db = SessionLocal()
@@ -21,15 +22,18 @@ def get_db():
     finally:
         db.close()
 
+
 # KST 타임존 정의
 KST = timezone(timedelta(hours=9))
 
 # ✅ 요금 미리보기
 from pydantic import BaseModel
 
+
 class RentalPreviewRequest(BaseModel):
     item_id: int
     end_time: datetime
+
 
 @router.post("/preview")
 def rental_preview(request: RentalPreviewRequest, db: Session = Depends(get_db)):
@@ -43,7 +47,7 @@ def rental_preview(request: RentalPreviewRequest, db: Session = Depends(get_db))
     total_fee = hours * price_per_hour
 
     insurance_fee = round(total_fee * 0.05)  # 보험금 5%
-    service_fee = round(total_fee * 0.05)    # 수수료 5%
+    service_fee = round(total_fee * 0.05)  # 수수료 5%
     total = total_fee + insurance_fee + service_fee
 
     print(f"[Preview] 요청 item_id: {request.item_id}")
@@ -62,8 +66,9 @@ def rental_preview(request: RentalPreviewRequest, db: Session = Depends(get_db))
         "usage_fee": total_fee,
         "insurance_fee": insurance_fee,
         "service_fee": service_fee,
-        "total": total
+        "total": total,
     }
+
 
 # ✅ 1. 대여 등록
 @router.post("/", response_model=RentalSchema)
@@ -73,14 +78,19 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="대여할 수 없는 아이템입니다.")
 
     if db_item.owner_id == rental.borrower_id:
-        raise HTTPException(status_code=400, detail="자신이 등록한 물품은 대여할 수 없습니다.")
+        raise HTTPException(
+            status_code=400, detail="자신이 등록한 물품은 대여할 수 없습니다."
+        )
 
-    active_rental = db.query(Rental).filter(
-        Rental.item_id == rental.item_id,
-        Rental.is_returned == False
-    ).first()
+    active_rental = (
+        db.query(Rental)
+        .filter(Rental.item_id == rental.item_id, Rental.is_returned == False)
+        .first()
+    )
     if active_rental:
-        raise HTTPException(status_code=400, detail="해당 아이템은 아직 반납되지 않았습니다.")
+        raise HTTPException(
+            status_code=400, detail="해당 아이템은 아직 반납되지 않았습니다."
+        )
 
     start_time = datetime.now(KST)  # 현재 시간 (KST 기준)
 
@@ -89,7 +99,9 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         end_time = end_time.replace(tzinfo=KST)
 
     if end_time <= start_time:
-        raise HTTPException(status_code=400, detail="종료시간은 시작시간보다 나중이어야 합니다.")
+        raise HTTPException(
+            status_code=400, detail="종료시간은 시작시간보다 나중이어야 합니다."
+        )
 
     hours = max(1, math.ceil((end_time - start_time).total_seconds() / 3600))
     # 단위(per_day or per_hour)에 따라 시간당 가격 계산
@@ -100,7 +112,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
 
     rental_price = price_per_hour * hours
     insurance_fee = round(rental_price * 0.05) if rental.has_insurance else 0
-    service_fee = round(rental_price * 0.05)    # 수수료 5%
+    service_fee = round(rental_price * 0.05)  # 수수료 5%
     total_pay = rental_price + insurance_fee + service_fee
 
     db_user = db.query(User).filter(User.id == rental.borrower_id).first()
@@ -120,7 +132,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         is_returned=False,
         has_insurance=rental.has_insurance,
         damage_reported=False,
-        deducted_amount=0
+        deducted_amount=0,
     )
 
     db.add(new_rental)
@@ -144,6 +156,7 @@ def get_rentals(
         query = query.filter(Rental.borrower_id == borrower_id)
     return query.all()
 
+
 # ✅ 3. 반납 처리 + AI 분석 + 보증금 정산
 @router.put("/{rental_id}/return", response_model=RentalSchema)
 async def return_rental(
@@ -151,7 +164,7 @@ async def return_rental(
     user_id: int = Form(...),
     item_id: int = Form(...),
     after_file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     rental = db.query(Rental).filter(Rental.id == rental_id).first()
     if not rental:
@@ -160,7 +173,7 @@ async def return_rental(
         raise HTTPException(status_code=403, detail="본인만 반납할 수 있습니다.")
     if rental.is_returned:
         raise HTTPException(status_code=400, detail="이미 반납된 대여입니다.")
-    
+
     before_img = get_before_image(item_id, db)
 
     rental_dir = f"images/after/rental_{rental_id}"
@@ -169,7 +182,9 @@ async def return_rental(
     with open(after_path, "wb") as f:
         f.write(await after_file.read())
 
-    rental_key, damage_detected, damage_info = is_item_damaged(item_id, rental_id, before_img, after_path)
+    rental_key, damage_detected, damage_info = is_item_damaged(
+        item_id, rental_id, before_img, after_path
+    )
 
     rental.is_returned = True
     rental.damage_reported = damage_detected
@@ -204,27 +219,34 @@ async def return_rental(
     db.commit()
     db.refresh(rental)
 
-    return JSONResponse(content={
-        "id": rental.id,
-        "item_id": rental.item_id,
-        "borrower_id": rental.borrower_id,
-        "start_time": rental.start_time.isoformat(),
-        "end_time": rental.end_time.isoformat(),
-        "is_returned": rental.is_returned,
-        "damage_reported": rental.damage_reported,
-        "deducted_amount": rental.deducted_amount,
-        "item": {
-            "id": rental.item.id,
-            "name": rental.item.name,
-            "description": rental.item.description,
-            "price_per_day": rental.item.price_per_day,
-            "status": rental.item.status,
-            "images": rental.item.images
-        } if rental.item else None,
-        "damage_info": damage_info,
-        "late_hours": late_hours,
-        "deducted_points": deducted_points
-    })
+    return JSONResponse(
+        content={
+            "id": rental.id,
+            "item_id": rental.item_id,
+            "borrower_id": rental.borrower_id,
+            "start_time": rental.start_time.isoformat(),
+            "end_time": rental.end_time.isoformat(),
+            "is_returned": rental.is_returned,
+            "damage_reported": rental.damage_reported,
+            "deducted_amount": rental.deducted_amount,
+            "item": (
+                {
+                    "id": rental.item.id,
+                    "name": rental.item.name,
+                    "description": rental.item.description,
+                    "price_per_day": rental.item.price_per_day,
+                    "status": rental.item.status,
+                    "images": rental.item.images,
+                }
+                if rental.item
+                else None
+            ),
+            "damage_info": damage_info,
+            "late_hours": late_hours,
+            "deducted_points": deducted_points,
+        }
+    )
+
 
 # 보관 이미지 가져오기 함수
 def get_before_image(item_id: int, db: Session):
@@ -234,36 +256,52 @@ def get_before_image(item_id: int, db: Session):
     relative_path = item.images[0].lstrip("/")
     absolute_path = os.path.join("app", relative_path)
     if not os.path.isfile(absolute_path):
-        raise HTTPException(status_code=404, detail="비포 이미지 파일이 존재하지 않습니다.")
+        raise HTTPException(
+            status_code=404, detail="비포 이미지 파일이 존재하지 않습니다."
+        )
     return absolute_path
+
 
 # ✅ 4. 대여 상세 조회
 @router.get("/{rental_id}", response_model=RentalSchema)
 def get_rental_detail(rental_id: int, db: Session = Depends(get_db)):
     rental = db.query(Rental).filter(Rental.id == rental_id).first()
     if not rental:
-        raise HTTPException(status_code=404, detail="해당 대여 기록을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=404, detail="해당 대여 기록을 찾을 수 없습니다."
+        )
     return rental
+
 
 # ✅ 5. 사용자별 대여 통계
 @router.get("/stats/{user_id}")
 def get_user_rental_stats(user_id: int, db: Session = Depends(get_db)):
     total = db.query(Rental).filter(Rental.borrower_id == user_id).count()
-    returned = db.query(Rental).filter(Rental.borrower_id == user_id, Rental.is_returned == True).count()
-    not_returned = db.query(Rental).filter(Rental.borrower_id == user_id, Rental.is_returned == False).count()
+    returned = (
+        db.query(Rental)
+        .filter(Rental.borrower_id == user_id, Rental.is_returned == True)
+        .count()
+    )
+    not_returned = (
+        db.query(Rental)
+        .filter(Rental.borrower_id == user_id, Rental.is_returned == False)
+        .count()
+    )
     return {
         "user_id": user_id,
         "total_rentals": total,
         "returned": returned,
-        "not_returned": not_returned
+        "not_returned": not_returned,
     }
+
 
 # ✅ 6. 대여 연장
 @router.put("/{rental_id}/extend")
 def extend_rental(
     rental_id: int,
-    days: int = 1,
-    db: Session = Depends(get_db)
+    hours: Optional[int] = None,
+    days: Optional[int] = None,
+    db: Session = Depends(get_db),
 ):
     rental = db.query(Rental).filter(Rental.id == rental_id).first()
     if not rental:
@@ -285,14 +323,30 @@ def extend_rental(
     else:
         price_per_hour = item.price_per_day
 
-    extension_hours = days * 24
+    if days is not None:
+        if days <= 0:
+            raise HTTPException(
+                status_code=400, detail="연장 기간은 1 이상이어야 합니다."
+            )
+        extension_hours = days * 24
+    elif hours is not None:
+        if hours <= 0:
+            raise HTTPException(
+                status_code=400, detail="연장 시간은 1 이상이어야 합니다."
+            )
+        extension_hours = hours
+    else:
+        raise HTTPException(
+            status_code=400, detail="days 또는 hours 중 하나는 제공되어야 합니다."
+        )
+
     extension_cost = int(price_per_hour * extension_hours)
 
     if user.point < extension_cost:
         raise HTTPException(status_code=400, detail="포인트가 부족합니다.")
 
     user.point -= extension_cost
-    rental.end_time += timedelta(days=days)
+    rental.end_time += timedelta(hours=extension_hours)
 
     db.commit()
     db.refresh(rental)
@@ -300,7 +354,7 @@ def extend_rental(
 
     return {
         "rental_id": rental.id,
-        "extended_days": days,
+        "extended_hours": extension_hours,
         "deducted_point": extension_cost,
         "user_point": user.point,
         "new_end_time": rental.end_time.isoformat(),
