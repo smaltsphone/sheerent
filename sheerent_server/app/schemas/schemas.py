@@ -80,6 +80,7 @@ class RentalCreate(BaseModel):
     item_id: Optional[int] = None
     borrower_id: int
     end_time: datetime
+    has_insurance: bool = False
 
 # ✅ 대여 출력용 (응답용)
 class Rental(BaseModel):
@@ -92,6 +93,7 @@ class Rental(BaseModel):
     is_returned: bool
     damage_reported: bool
     deducted_amount: int
+    has_insurance: bool
     item: Optional[ItemForRental]
 
     class Config:
