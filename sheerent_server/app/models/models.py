@@ -53,6 +53,7 @@ class Rental(Base):
     end_time = Column(DateTime)
     is_returned = Column(Boolean, default=False)
     damage_reported = Column(Boolean, default=False)
+    has_insurance = Column(Boolean, default=False)
     deducted_amount = Column(Integer, default=0)
     has_insurance = Column(Boolean, default=False)
 
