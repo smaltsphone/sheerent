@@ -93,9 +93,7 @@ class Rental(BaseModel):
     is_returned: bool
     damage_reported: bool
     has_insurance: bool
-
     deducted_amount: int
-    has_insurance: bool
     item: Optional[ItemForRental]
 
     class Config:
