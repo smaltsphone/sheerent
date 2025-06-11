@@ -2,6 +2,8 @@ import sys
 sys.path.append(r"C:\Users\radpion\Desktop\yolov5\yolov5")  # YOLOv5 소스코드 폴더 경로
 
 import os
+import subprocess
+import logging
 import torch
 from datetime import datetime
 from collections import defaultdict
@@ -9,6 +11,7 @@ from fastapi import APIRouter, UploadFile, File
 from PIL import Image
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # 현재 파일의 경로를 기준으로 상대 경로 설정
 base_dir = os.path.dirname(__file__)
@@ -32,25 +35,27 @@ def run_yolo_with_system(image_path, rental_id, folder_name):
     os.makedirs(output_dir, exist_ok=True)
 
     # detect.py 명령어 구성
-    command = (
-        f"python \"{detect_py_path}\" "
-        f"--weights \"{weights_path}\" "
-        f"--source \"{image_path}\" "
-        f"--conf 0.5 "
-        f"--project results/{rental_id} "
-        f"--name {folder_name} "
-        f"--exist-ok "
-        f"--save-txt"
-    )
+    command = [
+        "python", detect_py_path,
+        "--weights", weights_path,
+        "--source", image_path,
+        "--conf", "0.5",
+        "--project", f"results/{rental_id}",
+        "--name", folder_name,
+        "--exist-ok",
+        "--save-txt",
+    ]
 
-    # 실행
-    return_code = os.system(command)
-    print(f"Command executed: {command}")
-    print(f"Return code: {return_code}")
-    if return_code != 0:
-        print(f"Error occurred during detection. Command return code: {return_code}")
-    else:
-        print(f"Detection completed successfully for {image_path}")
+    logger.info("Command executed: %s", ' '.join(command))
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        logger.info("Stdout: %s", result.stdout)
+        if result.stderr:
+            logger.warning("Stderr: %s", result.stderr)
+    except subprocess.CalledProcessError as e:
+        logger.error("Detection failed with return code %s", e.returncode)
+        logger.error("Stderr: %s", e.stderr)
+        raise RuntimeError("YOLO detection failed") from e
 
     label_txt_dir = f"results/{rental_id}/{folder_name}/labels"
     class_counts = defaultdict(int)
