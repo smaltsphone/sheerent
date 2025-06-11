@@ -79,6 +79,28 @@ class _ReturnScreenState extends State<ReturnScreen> {
     }
   }
 
+  Future<void> payLateFee(int rentalId) async {
+    final url = Uri.parse("$baseUrl/rentals/$rentalId/pay_late_fee");
+    final response = await http.post(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      final deducted = data['deducted_points'] ?? 0;
+      final userPoint = data['user_point'];
+      if (userPoint != null) {
+        loggedInUserPoint = userPoint;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('연체료 ${formatter.format(deducted)} P 결제 완료')),
+      );
+      fetchRentedItems();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ 연체료 결제 실패: ${response.statusCode}')),
+      );
+    }
+  }
+
   Future<void> _captureImageFromCamera() async {
   final uri = Uri.parse("$baseUrl/capture");
 
@@ -293,6 +315,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
               ),
             ),
             actions: [
+              if (lateHours != null && lateFee != null && lateFee > 0)
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await payLateFee(rentalIdResp);
+                  },
+                  child: const Text('연체료 결제'),
+                ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);

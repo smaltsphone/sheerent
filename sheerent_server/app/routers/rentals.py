@@ -184,7 +184,7 @@ async def return_rental(
     if end_time.tzinfo is None or end_time.tzinfo.utcoffset(end_time) is None:
         end_time = end_time.replace(tzinfo=KST)
     late_hours = 0
-    deducted_points = 0
+    late_fee = 0
     if now > end_time:
         late_hours = math.ceil((now - end_time).total_seconds() / 3600)
         # 단위(per_day, per_hour)에 따라 시간당 가격 계산
@@ -193,13 +193,8 @@ async def return_rental(
         else:
             price_per_hour = db_item.price_per_day
         late_fee = late_hours * price_per_hour + 10000
-        has_insurance = rental.deposit_amount > 0
-        if has_insurance:
+        if rental.has_insurance:
             late_fee *= 0.95
-        db_user = db.query(User).filter(User.id == rental.borrower_id).first()
-        if db_user:
-            deducted_points = int(late_fee)
-            db_user.point -= deducted_points
 
     db.commit()
     db.refresh(rental)
@@ -223,7 +218,7 @@ async def return_rental(
         } if rental.item else None,
         "damage_info": damage_info,
         "late_hours": late_hours,
-        "deducted_points": deducted_points
+        "late_fee": int(late_fee)
     })
 
 # 보관 이미지 가져오기 함수
@@ -304,4 +299,48 @@ def extend_rental(
         "deducted_point": extension_cost,
         "user_point": user.point,
         "new_end_time": rental.end_time.isoformat(),
+    }
+
+# ✅ 연체료 결제
+@router.post("/{rental_id}/pay_late_fee")
+def pay_late_fee(rental_id: int, db: Session = Depends(get_db)):
+    rental = db.query(Rental).filter(Rental.id == rental_id).first()
+    if not rental:
+        raise HTTPException(status_code=404, detail="대여 기록을 찾을 수 없습니다.")
+    if not rental.is_returned:
+        raise HTTPException(status_code=400, detail="반납되지 않은 대여입니다.")
+
+    item = db.query(Item).filter(Item.id == rental.item_id).first()
+    user = db.query(User).filter(User.id == rental.borrower_id).first()
+    if not item or not user:
+        raise HTTPException(status_code=404, detail="대여 정보가 올바르지 않습니다.")
+
+    now = datetime.now(KST)
+    end_time = rental.end_time
+    if end_time.tzinfo is None or end_time.tzinfo.utcoffset(end_time) is None:
+        end_time = end_time.replace(tzinfo=KST)
+    if now <= end_time:
+        return {"deducted_points": 0, "user_point": user.point, "late_hours": 0}
+
+    late_hours = math.ceil((now - end_time).total_seconds() / 3600)
+    if item.unit == "per_day":
+        price_per_hour = item.price_per_day / 24
+    else:
+        price_per_hour = item.price_per_day
+    late_fee = late_hours * price_per_hour + 10000
+    if rental.has_insurance:
+        late_fee *= 0.95
+    late_fee = int(late_fee)
+
+    if user.point < late_fee:
+        raise HTTPException(status_code=400, detail="포인트가 부족합니다.")
+
+    user.point -= late_fee
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "deducted_points": late_fee,
+        "user_point": user.point,
+        "late_hours": late_hours,
     }
