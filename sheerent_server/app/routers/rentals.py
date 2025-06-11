@@ -118,7 +118,6 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         start_time=start_time,
         end_time=end_time,
         is_returned=False,
-        deposit_amount=insurance_fee,
         damage_reported=False,
         deducted_amount=0
     )
@@ -173,7 +172,7 @@ async def return_rental(
 
     rental.is_returned = True
     rental.damage_reported = damage_detected
-    rental.deducted_amount = rental.deposit_amount if damage_detected else 0
+    rental.deducted_amount = 0
 
     db_item = db.query(Item).filter(Item.id == rental.item_id).first()
     db_item.status = "registered"
@@ -189,7 +188,6 @@ async def return_rental(
         "end_time": rental.end_time.isoformat(),
         "is_returned": rental.is_returned,
         "damage_reported": rental.damage_reported,
-        "deposit_amount": rental.deposit_amount,
         "deducted_amount": rental.deducted_amount,
         "item": {
             "id": rental.item.id,
