@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'login_screen.dart';
 import 'register_user_screen.dart';
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'my_item_detail_page.dart';
 import 'charge_point_screen.dart';
 import 'qr_scan_page.dart';
@@ -17,7 +19,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Future<List<dynamic>> fetchMyItems() async {
-    final userId = loggedInUserId;
+    final userId = context.read<AuthProvider>().userId;
     if (userId == null) return [];
 
     final url = Uri.parse('$baseUrl/items/owned/$userId');
@@ -31,15 +33,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _refreshPoint() async {
-    if (loggedInUserId == null) return;
-    final url = Uri.parse("$baseUrl/users/$loggedInUserId");
+    final auth = context.read<AuthProvider>();
+    if (auth.userId == null) return;
+    final url = Uri.parse("$baseUrl/users/${auth.userId}");
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final userData = jsonDecode(utf8.decode(response.bodyBytes));
-      setState(() {
-        loggedInUserPoint = userData['point'];
-        loggedInUserIsAdmin = userData['is_admin'];
-      });
+      auth.updatePoint(userData['point']);
+      auth.updateAdmin(userData['is_admin']);
     }
   }
 
@@ -49,10 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: const Text("☰ 더보기")),
       body: ListView(
         children: [
-          if (loggedInUserId != null) ...[
+          if (context.watch<AuthProvider>().isLoggedIn) ...[
             ListTile(
               leading: const Icon(Icons.account_circle),
-              title: Text("👤 $loggedInUserName 님"),
+              title: Text("👤 ${context.watch<AuthProvider>().userName} 님"),
               subtitle: const Text("로그인 상태입니다."),
             ),
             ListTile(
@@ -62,7 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    "${loggedInUserPoint != null ? formatter.format(loggedInUserPoint) : '-'} P",
+                    "${context.watch<AuthProvider>().point != null ? formatter.format(context.watch<AuthProvider>().point) : '-'} P",
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   IconButton(
@@ -89,12 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: const Icon(Icons.logout),
               title: const Text("로그아웃"),
               onTap: () {
-                setState(() {
-                  loggedInUserId = null;
-                  loggedInUserName = null;
-                  loggedInUserPoint = null;
-                  loggedInUserIsAdmin = null;
-                });
+                context.read<AuthProvider>().logout();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("로그아웃 되었습니다.")),
                 );

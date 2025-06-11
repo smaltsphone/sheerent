@@ -5,38 +5,32 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'screens/register_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 
 const String apiBaseUrl = "https://sheerent-server.onrender.com";
 const String baseUrl = "http://172.30.1.3:8000";
 
-int? loggedInUserId;
-int? loggedInUserPoint;
-String? loggedInUserName;
-bool? loggedInUserIsAdmin;
-
 final NumberFormat formatter = NumberFormat('#,##0', 'ko_KR');
 
 void resetLoginState(BuildContext context) {
-  loggedInUserId = null;
-  loggedInUserName = null;
-  loggedInUserIsAdmin = null;
-  loggedInUserPoint = null;
+  Provider.of<AuthProvider>(context, listen: false).logout();
   Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
 }
 
 // ✅ 관리자 여부, 포인트 포함해서 전역 상태 저장
-void onLoginSuccess(BuildContext context, int userId, String userName, bool isAdmin, int point) {
-  loggedInUserId = userId;
-  loggedInUserName = userName;
-  loggedInUserIsAdmin = isAdmin;
-  loggedInUserPoint = point;
+void onLoginSuccess(
+    BuildContext context, int userId, String userName, bool isAdmin, int point) {
+  Provider.of<AuthProvider>(context, listen: false)
+      .login(id: userId, name: userName, admin: isAdmin, point: point);
   Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
 }
 
-bool isLoggedIn() => loggedInUserId != null;
+bool isLoggedIn(BuildContext context) =>
+    Provider.of<AuthProvider>(context, listen: false).isLoggedIn;
 
 void requireLogin(BuildContext context) {
-  if (!isLoggedIn()) {
+  if (!isLoggedIn(context)) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("로그인이 필요한 기능입니다.")),
     );
@@ -44,7 +38,7 @@ void requireLogin(BuildContext context) {
 }
 
 void handleRegisterButton(BuildContext context) {
-  if (!isLoggedIn()) {
+  if (!isLoggedIn(context)) {
     requireLogin(context);
     return;
   }
@@ -54,13 +48,14 @@ void handleRegisterButton(BuildContext context) {
   );
 }
 
-Future<void> handleRentItemWithDays(BuildContext context, int itemId, double days) async {
-  if (!isLoggedIn()) {
+Future<void> handleRentItemWithDays(
+    BuildContext context, int itemId, double days) async {
+  if (!isLoggedIn(context)) {
     requireLogin(context);
     return;
   }
 
-  final borrowerId = loggedInUserId;
+  final borrowerId = Provider.of<AuthProvider>(context, listen: false).userId;
   if (borrowerId == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("❌ 로그인 정보가 없습니다.")),
@@ -94,8 +89,8 @@ Future<void> handleRentItemWithDays(BuildContext context, int itemId, double day
   }
 }
 
-Future<List<dynamic>> fetchMyItems() async {
-  final userId = loggedInUserId;
+Future<List<dynamic>> fetchMyItems(BuildContext context) async {
+  final userId = Provider.of<AuthProvider>(context, listen: false).userId;
   if (userId == null) return [];
 
   final url = Uri.parse('$baseUrl/items/owned/$userId');

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'rental_detail_page.dart';
 
 class RentalHistoryPage extends StatefulWidget {
@@ -18,7 +20,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
   @override
   void initState() {
     super.initState();
-    if (isLoggedIn()) {
+    if (isLoggedIn(context)) {
       fetchRentalHistory();
     }
   }
@@ -28,7 +30,8 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
       loading = true;
     });
 
-    final url = Uri.parse("$baseUrl/users/$loggedInUserId/rentals");
+    final userId = context.read<AuthProvider>().userId;
+    final url = Uri.parse("$baseUrl/users/$userId/rentals");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -54,7 +57,7 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!isLoggedIn()) {
+    if (!isLoggedIn(context)) {
       return Scaffold(
         appBar: AppBar(title: const Text("🧾 대여 이력")),
         body: const Center(child: Text("로그인이 필요한 기능입니다.")),

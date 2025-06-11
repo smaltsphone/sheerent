@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Map<String, dynamic>? itemToEdit;
@@ -193,7 +195,7 @@ Future<void> fetchLockers() async {
   }
 
 Future<bool> _submitItem() async {
-  if (!isLoggedIn()) {
+  if (!isLoggedIn(context)) {
     requireLogin(context);
     return false;
   }
@@ -201,7 +203,7 @@ Future<bool> _submitItem() async {
   final name = nameController.text.trim();
   final desc = descController.text.trim();
   final price = int.tryParse(priceController.text) ?? 0;
-  final ownerId = loggedInUserId!;
+  final ownerId = context.read<AuthProvider>().userId!;
   final locker = _selectedLocker;
 
   if (name.isEmpty ||

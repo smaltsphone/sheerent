@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'screens/main_tab_view.dart';
 import 'screens/item_detail_page.dart'; // QR 코드 결과로 이동할 상세 페이지 import
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

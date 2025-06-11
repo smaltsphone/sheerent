@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class ChargePointScreen extends StatefulWidget {
   const ChargePointScreen({super.key});
@@ -22,7 +24,8 @@ class _ChargePointScreenState extends State<ChargePointScreen> {
       return;
     }
 
-    final url = Uri.parse("$baseUrl/users/$loggedInUserId/charge");
+    final userId = context.read<AuthProvider>().userId;
+    final url = Uri.parse("$baseUrl/users/$userId/charge");
     try {
       final response = await http.put(
         url,

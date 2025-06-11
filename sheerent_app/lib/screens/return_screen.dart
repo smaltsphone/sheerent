@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 
 class ReturnScreen extends StatefulWidget {
@@ -23,7 +25,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
   @override
   void initState() {
     super.initState();
-    if (isLoggedIn()) {
+    if (isLoggedIn(context)) {
       fetchRentedItems();
     }
   }
@@ -33,8 +35,9 @@ class _ReturnScreenState extends State<ReturnScreen> {
       loading = true;
     });
 
+    final userId = context.read<AuthProvider>().userId;
     final url = Uri.parse(
-        "$baseUrl/rentals?is_returned=false&borrower_id=$loggedInUserId");
+        "$baseUrl/rentals?is_returned=false&borrower_id=$userId");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -226,7 +229,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     final uri = Uri.parse("$baseUrl/rentals/$rentalId/return");
     final request = http.MultipartRequest('PUT', uri);
 
-    request.fields['user_id'] = loggedInUserId.toString();
+    request.fields['user_id'] = context.read<AuthProvider>().userId.toString();
     request.fields['item_id'] = itemId.toString();
     request.files.add(await http.MultipartFile.fromPath('after_file', afterFile.path));
 
@@ -322,7 +325,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!isLoggedIn()) {
+    if (!isLoggedIn(context)) {
       return Scaffold(
         appBar: AppBar(title: const Text("🔄 반납할 물품")),
         body: const Center(child: Text("로그인이 필요한 기능입니다.")),

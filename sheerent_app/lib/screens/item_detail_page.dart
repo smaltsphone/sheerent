@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../globals.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class ItemDetailPage extends StatefulWidget {
   final int itemId;
@@ -29,7 +31,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
   }
 
   Future<void> fetchUserPoint() async {
-  final url = Uri.parse('$baseUrl/users/$loggedInUserId');
+  final userId = context.read<AuthProvider>().userId;
+  final url = Uri.parse('$baseUrl/users/$userId');
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
@@ -158,7 +161,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               ),
             ),
             const SizedBox(height: 24),
-            if (item!['owner_id'] == loggedInUserId)
+            if (item!['owner_id'] == context.read<AuthProvider>().userId)
               Center(
                 child: Text(
                   '❌ 자신이 등록한 물건은 대여할 수 없습니다.',
@@ -257,7 +260,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: (item!['owner_id'] == loggedInUserId)
+      bottomNavigationBar: (item!['owner_id'] == context.read<AuthProvider>().userId)
           ? null
           : Padding(
               padding: const EdgeInsets.all(12.0),
@@ -292,7 +295,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                     headers: {"Content-Type": "application/json"},
                     body: jsonEncode({
                       "item_id": item!['id'],
-                      "borrower_id": loggedInUserId,
+                      "borrower_id": context.read<AuthProvider>().userId,
                       "end_time": endTime.toIso8601String(),
                       "total_pay": totalPay.round(),
                       "insurance": insuranceSelected,

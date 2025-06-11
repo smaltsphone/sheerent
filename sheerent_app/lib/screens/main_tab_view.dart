@@ -5,7 +5,6 @@ import 'return_screen.dart';
 import 'register_screen.dart';
 import 'rental_history_page.dart';
 import 'settings_screen.dart';
-import '../globals.dart';
 
 
 class MainTabView extends StatefulWidget {
