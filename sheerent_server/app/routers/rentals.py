@@ -99,7 +99,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         price_per_hour = db_item.price_per_day  # per_hour일 경우
 
     rental_price = price_per_hour * hours
-    insurance_fee = round(rental_price * 0.05)  # 보험료 5%
+    insurance_fee = round(rental_price * 0.05) if rental.has_insurance else 0
     service_fee = round(rental_price * 0.05)    # 수수료 5%
     total_pay = rental_price + insurance_fee + service_fee
 
@@ -119,6 +119,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         end_time=end_time,
         is_returned=False,
         deposit_amount=insurance_fee,
+        has_insurance=rental.has_insurance,
         damage_reported=False,
         deducted_amount=0
     )
