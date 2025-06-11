@@ -193,7 +193,7 @@ async def return_rental(
         else:
             price_per_hour = db_item.price_per_day
         late_fee = late_hours * price_per_hour + 10000
-        has_insurance = rental.deposit_amount > 0
+        has_insurance = rental.has_insurance
         if has_insurance:
             late_fee *= 0.95
         db_user = db.query(User).filter(User.id == rental.borrower_id).first()
