@@ -13,3 +13,4 @@ matplotlib
 scipy
 pandas
 qrcode
+passlib[bcrypt]

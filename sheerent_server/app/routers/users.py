@@ -11,6 +11,9 @@ from app.schemas.schemas import (
     Rental as RentalSchema,
 )
 from pydantic import BaseModel
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -32,11 +35,12 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
+    hashed_password = pwd_context.hash(user.password)
     db_user = User(
         name=user.name,
         email=user.email,
         phone=user.phone,
-        password=user.password
+        password=hashed_password
     )
     db.add(db_user)
     db.commit()
@@ -46,8 +50,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 # ✅ 2. 로그인
 @router.post("/login", response_model=UserSchema)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email, User.password == user.password).first()
-    if not db_user:
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user or not pwd_context.verify(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
     return db_user
 
