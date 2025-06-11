@@ -19,6 +19,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
   List rentals = [];
   bool loading = false;
   List<File> selectedImages = [];
+  final TextEditingController _extendController = TextEditingController(text: '1');
+  String _extendUnit = 'days';
 
   @override
   void initState() {
@@ -26,6 +28,12 @@ class _ReturnScreenState extends State<ReturnScreen> {
     if (isLoggedIn()) {
       fetchRentedItems();
     }
+  }
+
+  @override
+  void dispose() {
+    _extendController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchRentedItems() async {
@@ -58,16 +66,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
     });
   }
 
-  Future<void> extendRental(int rentalId) async {
-    final url = Uri.parse("$baseUrl/rentals/$rentalId/extend");
+  Future<void> extendRental(int rentalId, int amount, String unit) async {
+    final url = Uri.parse("$baseUrl/rentals/$rentalId/extend?$unit=$amount");
     final response = await http.put(url);
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
-      final additionalCharge = data['additional_charge'];
-      final msg = additionalCharge != null
-          ? "✅ 대여 기간이 1일 연장되었습니다. 추가 요금: ${formatter.format(additionalCharge)} P"
-          : "✅ 대여 기간이 1일 연장되었습니다";
+      final deducted = data['deducted_point'];
+      final msg = "✅ 대여 기간이 연장되었습니다. 차감: ${formatter.format(deducted)} P";
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg)),
       );
@@ -126,6 +132,67 @@ class _ReturnScreenState extends State<ReturnScreen> {
         selectedImages = [File(picked.path)];
       });
     }
+  }
+
+  void _showExtendDialog(int rentalId) {
+    _extendController.text = '1';
+    String unit = _extendUnit;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('대여 연장'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _extendController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '기간'),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButton<String>(
+                    value: unit,
+                    items: const [
+                      DropdownMenuItem(value: 'days', child: Text('일')),
+                      DropdownMenuItem(value: 'hours', child: Text('시간')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => unit = v);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final amount = int.tryParse(_extendController.text);
+                    if (amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('유효한 값을 입력하세요.')));
+                      return;
+                    }
+                    Navigator.pop(context);
+                    _extendUnit = unit;
+                    extendRental(rentalId, amount, unit);
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showReturnDialog(int rentalId, int itemId) {
@@ -420,8 +487,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
                                 child: const Text("반납하기"),
                               ),
                                 ElevatedButton(
-                                  onPressed: () => extendRental(rentalId),
-                                  child: const Text("+1일 연장"),
+                                  onPressed: () => _showExtendDialog(rentalId),
+                                  child: const Text("연장하기"),
                                 ),
                               ],
                             ),
