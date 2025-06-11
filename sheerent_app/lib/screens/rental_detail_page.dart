@@ -12,7 +12,6 @@ class RentalDetailPage extends StatelessWidget {
     final endTime = rental['end_time'];
     final isReturned = rental['is_returned'];
     final damageReported = rental['damage_reported'];
-    final deducted = rental['deducted_amount'];
     final beforeImageUrl = item != null
         ? "$baseUrl/static/images/item_${item['id']}/before.jpg"
         : null;
@@ -96,7 +95,6 @@ class RentalDetailPage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 보증금 정보 제거됨
 
                 const SizedBox(height: 24),
 

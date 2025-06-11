@@ -63,8 +63,13 @@ class _ReturnScreenState extends State<ReturnScreen> {
     final response = await http.put(url);
 
     if (response.statusCode == 200) {
+      final data = json.decode(utf8.decode(response.bodyBytes));
+      final additionalCharge = data['additional_charge'];
+      final msg = additionalCharge != null
+          ? "✅ 대여 기간이 1일 연장되었습니다. 추가 요금: ${formatter.format(additionalCharge)} P"
+          : "✅ 대여 기간이 1일 연장되었습니다";
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ 대여 기간이 1일 연장되었습니다")),
+        SnackBar(content: Text(msg)),
       );
       fetchRentedItems();
     } else {
@@ -240,6 +245,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
         final respJson = json.decode(respStr);
 
         final damageDetected = respJson['damage_reported'] ?? false;
+        final lateHours = respJson['late_hours'];
+        final lateFee = respJson['late_fee'];
         final rentalIdResp = respJson['id'];
         final dateTime = DateTime.parse(respJson['start_time']);
         final formattedDate =
@@ -260,6 +267,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(damageDetected ? "❌ 파손 감지" : "✅ 정상"),
+                  if (lateHours != null && lateFee != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "연체 ${lateHours}시간 / 연체료: ${formatter.format(lateFee)} P",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
