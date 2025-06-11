@@ -132,10 +132,16 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
 
 # ✅ 2. 전체 대여 조회 + 필터링
 @router.get("/", response_model=List[RentalSchema])
-def get_rentals(is_returned: Optional[bool] = Query(None), db: Session = Depends(get_db)):
+def get_rentals(
+    is_returned: Optional[bool] = Query(None),
+    borrower_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
     query = db.query(Rental).options(joinedload(Rental.item))
     if is_returned is not None:
         query = query.filter(Rental.is_returned == is_returned)
+    if borrower_id is not None:
+        query = query.filter(Rental.borrower_id == borrower_id)
     return query.all()
 
 # ✅ 3. 반납 처리 + AI 분석 + 보증금 정산
