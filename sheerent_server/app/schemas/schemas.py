@@ -91,7 +91,6 @@ class Rental(BaseModel):
     end_time: datetime
     is_returned: bool
     damage_reported: bool
-    deposit_amount: int
     deducted_amount: int
     item: Optional[ItemForRental]
 

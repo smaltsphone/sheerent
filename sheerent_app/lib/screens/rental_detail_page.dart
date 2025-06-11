@@ -12,7 +12,6 @@ class RentalDetailPage extends StatelessWidget {
     final endTime = rental['end_time'];
     final isReturned = rental['is_returned'];
     final damageReported = rental['damage_reported'];
-    final deposit = rental['deposit_amount'];
     final deducted = rental['deducted_amount'];
     final beforeImageUrl = item != null
         ? "$baseUrl/static/images/item_${item['id']}/before.jpg"
@@ -97,26 +96,7 @@ class RentalDetailPage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 보증금 정보
-                if (isReturned)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDamaged ? Colors.red[50] : Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isDamaged
-                          ? "보증금 차감: ₩$deducted"
-                          : "보증금 반환: ₩$deposit",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDamaged ? Colors.red : Colors.green,
-                      ),
-                    ),
-                  ),
+                // 보증금 정보 제거됨
 
                 const SizedBox(height: 24),
 
