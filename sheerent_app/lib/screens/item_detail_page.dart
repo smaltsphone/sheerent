@@ -138,19 +138,19 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('이름', style: Theme.of(context).textTheme.labelSmall),
+                    Text('이름', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(item!['name'] ?? '', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    Text('가격', style: Theme.of(context).textTheme.labelSmall),
+                    Text('가격', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text("${formatter.format(item!['price_per_day'])} P / ${getUnitText(item!['unit'])}"),
                     const SizedBox(height: 12),
-                    Text('설명', style: Theme.of(context).textTheme.labelSmall),
+                    Text('설명', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(item!['description'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 12),
-                    Text('보관함 번호', style: Theme.of(context).textTheme.labelSmall),
+                    Text('보관함 번호', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(
                       item!['locker_number'] ?? '없음',
@@ -370,7 +370,11 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                   }
 
                   // 다이얼로그 닫기
-                  Navigator.pop(context, true);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && Navigator.canPop(context)) {
+                      Navigator.pop(context, true);
+                    }
+                  });
                   } else {
                     final decodedBody = utf8.decode(response.bodyBytes);
                     final errorMsg = jsonDecode(decodedBody)['detail'] ?? "알 수 없는 오류";

@@ -115,30 +115,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 }
                 return Column(
-                  children: items.map((item) => ListTile(
-                    leading: item['images']?.isNotEmpty == true
-                        ? Image.network(
-                            '$baseUrl${item['images'][0]}',
-                            width: 40, height: 40, fit: BoxFit.cover)
-                        : const Icon(Icons.image),
-                    title: Text(item['name']),
-                    subtitle: Text("${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}",),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MyItemDetailPage(item: item),
-                        ),
-                      ).then((result) {
-                        if (result == true) {
-                          setState(() {
-                            // 화면 갱신 로직
-                          });
-                        }
-                      });
-                    },
-                  )).toList(),
-                );
+                children: items.map((item) {
+                  final isDamaged = item['damage_reported'] == true;
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isDamaged ? Colors.red : Colors.grey.shade300,
+                        width: isDamaged ? 2.5 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: item['images']?.isNotEmpty == true
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                '$baseUrl${item['images'][0]}',
+                                width: 50, height: 50, fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Icon(Icons.image),
+                      title: Text(item['name']),
+                      subtitle: Text(
+                        "${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}",
+                      ),
+                      trailing: isDamaged
+                          ? const Icon(Icons.warning, color: Colors.red)
+                          : null,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MyItemDetailPage(item: item),
+                          ),
+                        ).then((result) {
+                          if (result == true) {
+                            setState(() {});
+                          }
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              );
               },
             ),
           ] else ...[

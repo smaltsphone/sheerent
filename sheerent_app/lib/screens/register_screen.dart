@@ -211,9 +211,11 @@ Future<bool> _submitItem() async {
       price == 0 ||
       (!isEdit && selectedImages.isEmpty) ||
       locker == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("모든 필드와 보관함을 선택하고 이미지를 등록하세요.")),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("모든 필드와 보관함을 선택하고 이미지를 등록하세요.")),
+      );
+    }
     return false;
   }
 
@@ -246,15 +248,17 @@ Future<bool> _submitItem() async {
         const SnackBar(content: Text("✅ 수정 성공")),
       );
 
-      if (Navigator.canPop(context)) {
+      if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context, true);
       }
 
       return true;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ 수정 실패: ${response.statusCode}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ 수정 실패: ${response.statusCode}")),
+        );
+      }
       return false;
     }
   } else {
@@ -267,7 +271,7 @@ Future<bool> _submitItem() async {
     request.fields['owner_id'] = ownerId.toString();
     request.fields['unit'] = _selectedUnit;
     request.fields['locker_number'] = locker;
-    request.fields['status'] = 'available'; // 등록 시 기본값
+    request.fields['status'] = 'available';
 
     for (final image in selectedImages) {
       final multipartFile = await http.MultipartFile.fromPath('files', image.path);
@@ -278,40 +282,45 @@ Future<bool> _submitItem() async {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final respJson = json.decode(response.body);
-      final newItemId = respJson['id'];
-
       if (!mounted) return false;
-      await _closeLocker();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ 등록 성공")),
-      );
-
-      // 스택을 초기화하고 이동 (등록 성공 시)
-      Navigator.of(context).pushNamedAndRemoveUntil('/rentals', (route) => false);
-
+      // ✅ 먼저 초기화
       nameController.clear();
       descController.clear();
       priceController.clear();
-
       setState(() {
         selectedImages.clear();
         _selectedUnit = 'per_day';
         _selectedLocker = null;
       });
 
+      // ✅ 메시지 먼저 띄우고
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ 등록 성공")),
+      );
+
+      // ✅ 300ms 지연 후 화면 전환
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // ✅ 보관함 닫기
+      await _closeLocker();
+
+      // ✅ 한 번만 push
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/rentals', (route) => false);
+      }
+
       return true;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ 등록 실패: ${response.statusCode}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ 등록 실패: ${response.statusCode}")),
+        );
+      }
       return false;
     }
   }
 }
-
-
 
   @override
   void dispose() {

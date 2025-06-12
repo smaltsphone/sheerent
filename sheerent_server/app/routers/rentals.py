@@ -185,13 +185,15 @@ async def return_rental(
 
     before_img = get_before_image(item_id, db)
 
-    rental_dir = f"images/after/rental_{rental_id}"
+    rental_key = f"{item_id}_{rental_id}_{rental.start_time.strftime('%Y%m%d')}"
+
+    rental_dir = f"results/{rental_key}/after"
     os.makedirs(rental_dir, exist_ok=True)
     after_path = os.path.join(rental_dir, "after.jpg")
     with open(after_path, "wb") as f:
         f.write(await after_file.read())
 
-    rental_key, damage_detected, damage_info = is_item_damaged(
+    _, damage_detected, damage_info = is_item_damaged(
         item_id, rental_id, before_img, after_path
     )
 
@@ -203,7 +205,6 @@ async def return_rental(
     end_time = rental.end_time
     if end_time.tzinfo is None or end_time.tzinfo.utcoffset(end_time) is None:
         end_time = end_time.replace(tzinfo=KST)
-
     late_hours = 0
     late_fee = 0
     if now > end_time:
@@ -233,6 +234,11 @@ async def return_rental(
             content=message,
             created_at=datetime.now(KST)
         ))
+
+    print("✅ [DEBUG] 렌탈 키:", rental_key)
+    print("✅ [DEBUG] 저장된 이미지 경로:", after_path)
+    print("✅ [DEBUG] 응답 after_image_url:", f"/results/{rental_key}/after/after.jpg") 
+    rental.after_image_url = f"/results/{rental_key}/after/after.jpg".replace("\\", "/")   
     db.commit()
     db.refresh(rental)
 
@@ -259,7 +265,8 @@ async def return_rental(
         "damage_fee": damage_fee,
         "total_deducted": total_deduction,
         "user_point_after": user.point,
-        "has_insurance": insurance_checked  # ✅ 클라에 다시 전달
+        "has_insurance": insurance_checked,  # ✅ 클라에 다시 전달
+        "after_image_url": f"/results/{rental_key}/after/after.jpg".replace("\\", "/")
     })
 
 

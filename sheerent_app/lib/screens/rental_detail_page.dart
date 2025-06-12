@@ -13,8 +13,9 @@ class RentalDetailPage extends StatelessWidget {
     final isReturned = rental['is_returned'];
     final damageReported = rental['damage_reported'];
     final beforeImageUrl = item != null
-        ? "$baseUrl/static/images/item_${item['id']}/before.jpg"
-        : null;
+      ? "$baseUrl${item['images'][0]}"  // 원래 저장된 곳
+      : null;
+    final afterImageUrl = rental['after_image_url'];  
 
     final formattedStart = startTime?.replaceAll('T', ' ').split('.').first ?? '-';
     final formattedEnd = endTime?.replaceAll('T', ' ').split('.').first ?? '-';
@@ -27,10 +28,11 @@ class RentalDetailPage extends StatelessWidget {
     final statusColor = isReturned
         ? (isDamaged ? Colors.red : Colors.green)
         : Colors.orange;
+        
 
     return Scaffold(
       appBar: AppBar(title: const Text("대여 상세정보")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -62,13 +64,19 @@ class RentalDetailPage extends StatelessWidget {
 
                 // 설명 및 가격
                 if (item != null) ...[
-                  Text("설명", style: Theme.of(context).textTheme.labelSmall),
+                  const Text("설명", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(item['description'] ?? '-', style: Theme.of(context).textTheme.bodyMedium),
+                  Text(item['description'] ?? '-', style: const TextStyle(fontSize: 15)),
                   const SizedBox(height: 12),
-                  Text("가격", style: Theme.of(context).textTheme.labelSmall),
+                  const Text("가격", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text("${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}",),
+                  Text("${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}",
+                      style: const TextStyle(fontSize: 15)),
+                  const SizedBox(height: 12),
+                  const Text("보험 가입 여부", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(rental['has_insurance'] == true ? "✅ 가입" : "❌ 미가입",
+                      style: const TextStyle(fontSize: 15)),
                 ],
                 const SizedBox(height: 16),
 
@@ -93,31 +101,91 @@ class RentalDetailPage extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 20),
-
-
                 const SizedBox(height: 24),
 
-                // 이미지
-                if (beforeImageUrl != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("등록 이미지 (Before)", style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          beforeImageUrl,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Text("이미지를 불러올 수 없습니다."),
-                        ),
-                      ),
-                    ],
+// 이미지 영역 (Before / After 나란히 표시)
+if (beforeImageUrl != null || rental['after_image_url'] != null)
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("이미지 비교", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          // 등록 이미지 (Before)
+          Expanded(
+            child: Column(
+              children: [
+                const Text("등록 이미지", style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: beforeImageUrl != null
+                        ? Image.network(
+                            beforeImageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Text("불러오기 실패"),
+                          )
+                        : const Center(child: Text("이미지 없음")),
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+// 반납 이미지 (After)
+Expanded(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text("반납 이미지", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 4),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Builder(
+            builder: (context) {
+              print("✅ [DEBUG] 반납 이미지 URL: $afterImageUrl");
+              if (afterImageUrl != null) {
+                final fullUrl = "$baseUrl$afterImageUrl";
+                print("✅ [DEBUG] 반납 이미지 URL: $fullUrl");
+
+                return Image.network(
+                  fullUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print("❌ [ERROR] 이미지 로딩 실패: $error");
+                    return const Text("불러오기 실패");
+                  },
+                );
+              } else {
+                print("❗ [DEBUG] after_image_url이 null입니다.");
+                return const Center(child: Text("이미지 없음"));
+              }
+            },
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+        ],
+      )
+    ]
+  ),
+
+
+
               ],
             ),
           ),

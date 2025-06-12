@@ -472,7 +472,6 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
               child: const Text("반납하기"),
             ),
 
-
             // 취소 버튼
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -586,6 +585,7 @@ Future<void> _returnItem(int rentalId, int itemId, File afterFile, bool hasInsur
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("✅ 반납 완료")),
                       );
+                      fetchRentedItems();
                     });
                   },
                   child: const Text("확인"),
@@ -606,6 +606,7 @@ Future<void> _returnItem(int rentalId, int itemId, File afterFile, bool hasInsur
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -702,6 +703,7 @@ Future<void> _returnItem(int rentalId, int itemId, File afterFile, bool hasInsur
                                   }
 
                                   // 보관함 열기 시도 후 기존 반납 다이얼로그 호출
+                                  await Future.delayed(const Duration(milliseconds: 100));
                                   _showReturnDialog(rentalId, itemId);
                                 },
                                 child: const Text("반납하기"),
