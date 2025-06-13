@@ -7,7 +7,7 @@ import os
 import math
 
 from app.database import SessionLocal
-from app.models.models import Rental, Item, User, Message
+from app.models.models import Rental, Item, User, Message, ItemStatus
 from app.schemas.schemas import Rental as RentalSchema, RentalCreate
 from app.routers.ai import is_item_damaged
 
@@ -223,7 +223,8 @@ async def return_rental(
     rental.is_returned = True
     rental.damage_reported = damage_detected
     rental.deducted_amount = total_deduction
-    db_item.status = "registered"
+    db_item.damage_reported = damage_detected
+    db_item.status = ItemStatus.returned if damage_detected else ItemStatus.registered
     if damage_detected:
         insurance_text = "가입됨" if insurance_checked else "미가입"
         message = f"[파손 감지] '{db_item.name}'이(가) 반납 시 파손되었습니다.\n보험 가입 여부: {insurance_text}"
