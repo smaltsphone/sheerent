@@ -236,5 +236,6 @@ def repair_item(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="현재 파손 상태가 아닙니다.")
 
     db_item.damage_reported = False
+    db_item.status = ItemStatus.registered
     db.commit()
     return {"message": "✅ 수리 처리가 완료되었습니다.", "item_id": item_id}
