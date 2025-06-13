@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+python-multipart
+torch
+requests
+Pillow
+pydantic[email]
+numpy
+opencv-python
+matplotlib
+scipy
+pandas
+qrcode
+passlib[bcrypt]
