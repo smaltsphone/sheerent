@@ -39,6 +39,7 @@ class Item(Base):
     unit = Column(String(20))
     locker_number = Column(String(20), nullable=True)
     damage_reported = Column(Boolean, default=False)
+    has_insurance = Column(Boolean, default=False)
 
     owner = relationship("User", back_populates="items")
     rentals = relationship("Rental", back_populates="item")
