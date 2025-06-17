@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'my_item_detail_page.dart';
 import 'charge_point_screen.dart';
-import 'qr_scan_page.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -144,17 +143,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       trailing: isDamaged
                           ? const Icon(Icons.warning, color: Colors.red)
                           : null,
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => MyItemDetailPage(item: item),
                           ),
-                        ).then((result) {
+                        );
                           if (result == true) {
                             setState(() {});
                           }
-                        });
                       },
                     ),
                   );

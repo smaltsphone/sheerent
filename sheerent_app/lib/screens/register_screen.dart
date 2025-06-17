@@ -113,7 +113,7 @@ Future<void> fetchLockers() async {
   }
 
   Future<void> _captureImageFromCamera() async {
-    final uri = Uri.parse("$baseUrl/capture");
+    final uri = Uri.parse("$baseUrl/locker/capture");
     try {
       final response = await http.get(uri);
       if (!mounted) return;

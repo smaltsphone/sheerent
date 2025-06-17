@@ -6,9 +6,10 @@ import os
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import SessionLocal
-from app.models.models import Item, ItemStatus
+from app.models.models import Item, ItemStatus, Rental
 from app.schemas.schemas import Item as ItemSchema, ItemCreate, ItemStatusUpdate
 from typing import Optional
+
 
 router = APIRouter(tags=["items"])
 
@@ -50,6 +51,7 @@ async def create_item_with_images(
     unit: str = Form("per_day"),
     locker_number: Optional[str] = Form(default=None),  # ✅ 보관함 번호 입력 받기
     files: list[UploadFile] = File(default=[]),
+    has_insurance: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     # ✅ 중복된 보관함 번호가 있는지 확인
@@ -70,6 +72,7 @@ async def create_item_with_images(
         unit=unit,
         locker_number=locker_number,  # ✅ 저장
         images=[],
+        has_insurance=has_insurance,
         status=ItemStatus.registered
     )
     db.add(db_item)
@@ -114,12 +117,26 @@ def update_item_status(item_id: int, update: ItemStatusUpdate, db: Session = Dep
     return item
 
 # 5. 아이템 상세 조회
-@router.get("/{item_id}", response_model=ItemSchema)
+@router.get("/{item_id}")
 def get_item_detail(item_id: int, db: Session = Depends(get_db)):
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="해당 아이템을 찾을 수 없습니다.")
-    return item
+        raise HTTPException(status_code=404, detail="아이템 없음")
+
+    rental = db.query(Rental).filter(
+        Rental.item_id == item_id
+    ).order_by(Rental.id.desc()).first()
+
+    item_data = item.__dict__.copy()
+    item_data.pop("_sa_instance_state", None)
+
+    if rental:
+        item_data['rental'] = {
+            "id": rental.id,
+            "has_insurance": rental.has_insurance
+        }
+
+    return item_data
 
 # 6. 아이템 통계 조회
 @router.get("/stats")
@@ -183,6 +200,7 @@ async def update_item(
     locker_number: str = Form(None),
     status: str = Form(None),
     files: list[UploadFile] = File(default=[]),
+    has_insurance: Optional[bool] = Form(None),
     db: Session = Depends(get_db)
 ):
     item = db.query(Item).filter(Item.id == item_id).first()
@@ -236,5 +254,6 @@ def repair_item(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="현재 파손 상태가 아닙니다.")
 
     db_item.damage_reported = False
+    db_item.status = ItemStatus.registered
     db.commit()
     return {"message": "✅ 수리 처리가 완료되었습니다.", "item_id": item_id}

@@ -38,6 +38,7 @@ class Item(Base):
     images = Column(JSON)
     unit = Column(String(20))
     locker_number = Column(String(20), nullable=True)
+    damage_reported = Column(Boolean, default=False)
 
     owner = relationship("User", back_populates="items")
     rentals = relationship("Rental", back_populates="item")
@@ -55,6 +56,7 @@ class Rental(Base):
     damage_reported = Column(Boolean, default=False)
     has_insurance = Column(Boolean, default=False)
     deducted_amount = Column(Integer, default=0)
+    after_image_url = Column(String(300), nullable=True)
 
     item = relationship("Item", back_populates="rentals")
 

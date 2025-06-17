@@ -272,14 +272,53 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text("💳 결제 확인"),
-                      content: Text(
-                        "물품 가격: ${formatter.format(rentalPrice.round())} P\n"
-                        "수수료 (5%): ${formatter.format(fee.round())} P\n"
-                        "보험료 (5%): ${formatter.format(insuranceFee.round())} P\n"
-                        "총 결제 금액: ${formatter.format(totalPay.round())} P\n"
-                        "결제 후 남은 금액: ${userPoint != null ? formatter.format((userPoint! - totalPay).round()) : '로딩 중...'} P\n\n"
-                        "결제를 진행하시겠습니까?",
+                      title: const Text("💳 결제"),
+                      content: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 16, color: Colors.black),
+                          children: [
+                            TextSpan(text: "물품 가격: "),
+                            TextSpan(
+                              text: "${formatter.format(rentalPrice.round())} P\n",
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            TextSpan(text: "수수료 (5%): "),
+                            TextSpan(
+                              text: "${formatter.format(fee.round())} P\n",
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            if (insuranceSelected) ...[
+                              TextSpan(text: "보험료 (5%): "),
+                              TextSpan(
+                                text: "${formatter.format(insuranceFee.round())} P\n",
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                            const TextSpan(text: "\n"),
+                            const TextSpan(
+                              text: "총 결제 금액: ",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: "${formatter.format(totalPay.round())} P\n",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                            ),
+                            const TextSpan(
+                              text: "결제 후 남은 금액: ",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: userPoint != null
+                                  ? "${formatter.format((userPoint! - totalPay).round())} P\n\n"
+                                  : "로딩 중...\n\n",
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const TextSpan(
+                              text: "결제를 진행하시겠습니까?",
+                              style: TextStyle(fontWeight: FontWeight.bold, color:Colors.black87, fontSize: 16,),
+                            ),
+                          ],
+                        ),
                       ),
                       actions: [
                         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("취소")),

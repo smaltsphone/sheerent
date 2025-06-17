@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/main_tab_view.dart';
-import 'screens/item_detail_page.dart'; // QR 코드 결과로 이동할 상세 페이지 import
 import 'package:provider/provider.dart';
+import 'screens/main_tab_view.dart';
+import 'screens/item_detail_page.dart';
+import 'screens/splash_screen.dart'; // ✅ 추가
 import 'providers/auth_provider.dart';
 
 void main() {
@@ -24,8 +25,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MainTabView(), // 앱 시작 시 하단 탭 화면으로 이동
+      initialRoute: '/', // ✅ 스플래시 먼저 띄우기
       routes: {
+        '/': (context) => const SplashScreen(), // ✅ 첫 화면: 쉬봇 splash
+        '/home': (context) => const MainTabView(), // ✅ 메인 탭 화면
         '/item_detail': (context) {
           final itemId = ModalRoute.of(context)!.settings.arguments as int;
           return ItemDetailPage(itemId: itemId);

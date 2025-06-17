@@ -198,10 +198,11 @@ Future<bool> fetchInsuranceStatus(int rentalId) async {
     }
   }
 
-void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTimeStr) {
+void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTimeStr) async {
   rentalAmount = 1;
   rentalUnit = RentalUnit.hour;
-  insuranceSelected = false;
+
+  final hasInsurance = await fetchInsuranceStatus(rentalId); // ✅ 보험 여부 서버에서 조회
 
   showDialog(
     context: context,
@@ -216,7 +217,7 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
           final pricePerHour = (unit == 'per_day') ? pricePerDay / 24 : pricePerDay;
           final rentalHours = rentalAmount * (rentalUnit == RentalUnit.day ? 24 : 1);
           final rentalPrice = pricePerHour * rentalHours;
-          final insuranceFee = insuranceSelected ? pricePerHour * 0.05 * rentalHours : 0;
+          final insuranceFee = hasInsurance ? pricePerHour * 0.05 * rentalHours : 0;
           final fee = rentalPrice * 0.05;
           final totalPay = rentalPrice + fee + insuranceFee;
 
@@ -280,55 +281,49 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: insuranceSelected,
-                      onChanged: (value) {
-                        setState(() {
-                          insuranceSelected = value ?? false;
-                        });
-                      },
-                    ),
-                    const Text('보험 가입', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                if (insuranceSelected)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Text(
-                      '⚠️ 파손 시 자기부담금 3만원이 발생합니다.',
-                      style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold),
-                    ),
-                  ),
               ],
             );
           }
 
-          Widget buildPaymentSummary() {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("💳 결제 내역", style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text("물품 가격: ${formatter.format(rentalPrice.round())} P"),
-                Text("수수료 (5%): ${formatter.format(fee.round())} P"),
-                Text("보험료 (5%): ${formatter.format(insuranceFee.round())} P"),
-                Text("총 결제 금액: ${formatter.format(totalPay.round())} P"),
-                Text("결제 후 남은 금액: ${formatter.format((loggedInUserPoint - totalPay).round())} P"),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Icons.schedule, color: Colors.redAccent, size: 28),
-                    const SizedBox(width: 8),
-                    Text('반납 시간: $returnTimeStr',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.redAccent)),
-                  ],
-                ),
-              ],
-            );
-          }
+Widget buildPaymentSummary() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("💳 결제",
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+
+      // ✅ 요금 항목들
+      Text("물품 가격: ${formatter.format(rentalPrice.round())} P",
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      Text("수수료 (5%): ${formatter.format(fee.round())} P",
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+      if (hasInsurance)
+        Text("보험료 (5%): ${formatter.format(insuranceFee.round())} P",
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+
+      const Divider(height: 24, thickness: 1.2),
+
+      // ✅ 결제 요약 강조
+      Text("총 결제 금액: ${formatter.format(totalPay.round())} P",
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black)),
+      Text("결제 후 남은 금액: ${formatter.format((loggedInUserPoint - totalPay).round())} P",
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+
+      const SizedBox(height: 12),
+
+      // ✅ 반납 시간 안내
+      Row(
+        children: [
+          const Icon(Icons.schedule, color: Colors.redAccent, size: 28),
+          const SizedBox(width: 8),
+          Text('반납 시간: $returnTimeStr',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.redAccent)),
+        ],
+      ),
+    ],
+  );
+}
 
           return AlertDialog(
             title: const Text('대여 연장'),
@@ -371,7 +366,7 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
                     rentalId,
                     rentalAmount,
                     rentalUnit == RentalUnit.hour ? "hours" : "days",
-                    insuranceSelected,
+                    hasInsurance, // ✅ 자동 전달
                   );
                 },
                 child: const Text('확인'),
@@ -383,6 +378,7 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
     },
   );
 }
+
 
 
 
@@ -444,8 +440,6 @@ void _showExtendDialog(int rentalId, Map<String, dynamic> itemData, String endTi
 
                       // ✅ 보험 여부 서버에서 조회
                       final hasInsurance = await fetchInsuranceStatus(rentalId);
-                      print('[디버그] fetchInsuranceStatus 결과: $hasInsurance');
-
                       await _returnItem(rentalId, itemId, selectedImages.first, hasInsurance);
 
                       try {
@@ -637,22 +631,33 @@ Future<void> _returnItem(int rentalId, int itemId, File afterFile, bool hasInsur
 
                     final rentalId = rental['id'];
                     final itemId = item['id'];
-                    final endTime = DateTime.parse(rental['end_time']);
-                    final now = DateTime.now();
-                    final remaining = endTime.difference(now);
-                    String remainingText;
-                    if (remaining.isNegative) {
-                      final overdue = now.difference(endTime);
-                      final itemPrice = item['price_per_day'] ?? 0;
-                      final overdueDays = (overdue.inHours / 24).ceil();
-                      final overdueFee = itemPrice * overdueDays;
-                      final penalty = (overdueFee * 0.1).round();
-                      remainingText =
-                          '⛔ ${overdue.inHours}시간 연체\n연체비용 ${formatter.format(overdueFee)}원 + 벌금 ${formatter.format(penalty)}원';
-                    } else {
-                      remainingText =
-                          '⏰ ${remaining.inHours}시간 ${remaining.inMinutes.remainder(60)}분 남음';
-                    }
+final endTime = DateTime.parse(rental['end_time']);
+final now = DateTime.now();
+final remaining = endTime.difference(now);
+
+String remainingText;
+if (remaining.isNegative) {
+  final overdue = now.difference(endTime);
+  final itemPrice = item['price_per_day'] ?? 0;
+  final overdueDays = (overdue.inHours / 24).ceil();
+  final overdueFee = itemPrice * overdueDays;
+  final penalty = (overdueFee * 0.1).round();
+  remainingText =
+      '⛔ ${overdue.inHours}시간 연체\n연체비용 ${formatter.format(overdueFee)}원 + 벌금 ${formatter.format(penalty)}원';
+} else {
+  final totalHours = remaining.inHours;
+  final minutes = remaining.inMinutes.remainder(60);
+  final days = totalHours ~/ 24;
+  final hours = totalHours % 24;
+
+  List<String> parts = [];
+  if (days > 0) parts.add("$days일");
+  if (hours > 0) parts.add("$hours시간");
+  if (minutes > 0) parts.add("$minutes분");
+  if (parts.isEmpty) parts.add("0분");
+
+  remainingText = "⏰ ${parts.join(' ')} 남음";
+}
 
                     final beforeImageUrl =
                         "$baseUrl/static/images/item_$itemId/before.jpg";

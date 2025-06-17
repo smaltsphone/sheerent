@@ -14,11 +14,13 @@ class MyItemDetailPage extends StatefulWidget {
 
 class _MyItemDetailPageState extends State<MyItemDetailPage> {
   bool isRented = false;
+  late Map<String, dynamic> currentItem;
 
   @override
   void initState() {
     super.initState();
-    checkRentalStatus();
+    currentItem = Map<String, dynamic>.from(widget.item);
+    refreshItem();
   }
 
 Future<void> checkRentalStatus() async {
@@ -38,14 +40,17 @@ Future<void> checkRentalStatus() async {
 Future<void> refreshItem() async {
   final url = Uri.parse('$baseUrl/items/${widget.item['id']}');
   final response = await http.get(url);
+
   if (response.statusCode == 200) {
-    final updatedItem = jsonDecode(response.body);
-    print("디버그: updatedItem = $updatedItem");
-    if (!mounted) return;  // 위젯이 트리에 없으면 종료
+    final updatedItem = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final rentalInfo = updatedItem['rental'];
+
+    if (!mounted) return;
+
     setState(() {
-      widget.item.clear();
-      widget.item.addAll(updatedItem);
+      currentItem = updatedItem;
     });
+
     // 대여 상태도 다시 확인
     await checkRentalStatus();
   } else {
@@ -56,6 +61,7 @@ Future<void> refreshItem() async {
     }
   }
 }
+
 
   Future<void> deleteItem(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -91,11 +97,11 @@ Future<void> refreshItem() async {
 
   @override
   Widget build(BuildContext context) {
-  final item = widget.item;
+  final item = currentItem;
   final List imageUrls = item['images'] ?? [];
 
   final bool isDamaged = item['damage_reported'] == true;
-  final bool hasInsurance = item['has_insurance'] == true;
+  final bool hasInsurance = (item['has_insurance'] ?? false) || (item['rental']?['has_insurance'] ?? false);
 
   return Scaffold(
     appBar: AppBar(title: const Text("내가 등록한 물품")),
@@ -128,22 +134,33 @@ Future<void> refreshItem() async {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('이름: ${item['name']}', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text(
-                      '가격: ${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}',
-                    ),
-                    const SizedBox(height: 8),
-                    Text('설명: ${item['description']}'),
-                    const SizedBox(height: 8),
-                    Text('보관함 번호: ${item['locker_number'] ?? '없음'}'),
-                    const SizedBox(height: 12),
+                    Text('이름', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(item['name']?.toString() ?? '이름 없음'),
 
+                    const SizedBox(height: 12),
+                    Text('가격', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text("${formatter.format(item['price_per_day'])} P / ${item['unit'] == 'per_hour' ? '시간' : '일'}"),
+
+                    const SizedBox(height: 12),
+                    Text('설명', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(item['description'] ?? ''),
+
+                    const SizedBox(height: 12),
+                    Text('보관함 번호', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(item['locker_number'] ?? '없음'),
+
+                    const SizedBox(height: 12),
                     if (isDamaged) ...[
+                      Text('보험 가입 여부', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
                       Text(
-                        hasInsurance ? "보험 가입됨" : "보험 미가입",
-                        style: const TextStyle(
-                          color: Colors.red,
+                        hasInsurance ? "✅ 가입" : "❌ 미가입",
+                        style: TextStyle(
+                          color: hasInsurance ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -159,6 +176,8 @@ Future<void> refreshItem() async {
                               const SnackBar(content: Text("✅ 수리 완료")),
                             );
                             await refreshItem(); // 최신 상태 반영
+                            Navigator.pop(context, true);
+                            if (mounted) setState(() {}); // 강제 리빌드
                           }
                         } else {
                           if (context.mounted) {

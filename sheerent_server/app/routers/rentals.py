@@ -7,7 +7,7 @@ import os
 import math
 
 from app.database import SessionLocal
-from app.models.models import Rental, Item, User, Message
+from app.models.models import Rental, Item, User, Message, ItemStatus
 from app.schemas.schemas import Rental as RentalSchema, RentalCreate
 from app.routers.ai import is_item_damaged
 
@@ -148,6 +148,7 @@ def get_rentals(
     is_returned: Optional[bool] = Query(None),
     borrower_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    
 ):
     query = db.query(Rental).options(joinedload(Rental.item))
     if is_returned is not None:
@@ -223,7 +224,8 @@ async def return_rental(
     rental.is_returned = True
     rental.damage_reported = damage_detected
     rental.deducted_amount = total_deduction
-    db_item.status = "registered"
+    db_item.damage_reported = damage_detected
+    db_item.status = ItemStatus.returned if damage_detected else ItemStatus.registered
     if damage_detected:
         insurance_text = "가입됨" if insurance_checked else "미가입"
         message = f"[파손 감지] '{db_item.name}'이(가) 반납 시 파손되었습니다.\n보험 가입 여부: {insurance_text}"
@@ -235,9 +237,6 @@ async def return_rental(
             created_at=datetime.now(KST)
         ))
 
-    print("✅ [DEBUG] 렌탈 키:", rental_key)
-    print("✅ [DEBUG] 저장된 이미지 경로:", after_path)
-    print("✅ [DEBUG] 응답 after_image_url:", f"/results/{rental_key}/after/after.jpg") 
     rental.after_image_url = f"/results/{rental_key}/after/after.jpg".replace("\\", "/")   
     db.commit()
     db.refresh(rental)
@@ -293,6 +292,7 @@ def get_rental_detail(rental_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=404, detail="해당 대여 기록을 찾을 수 없습니다."
         )
+    
     return rental
 
 
@@ -438,4 +438,16 @@ def get_messages(user_id: int, db: Session = Depends(get_db)):
         }
         for msg in messages
     ]
+
+
+@router.delete("/{rental_id}")
+def delete_rental(rental_id: int, db: Session = Depends(get_db)):
+    rental = db.query(Rental).filter(Rental.id == rental_id).first()
+    if not rental:
+        raise HTTPException(status_code=404, detail="Rental not found")
+
+    db.delete(rental)
+    db.commit()
+    return {"message": "Rental deleted successfully"}
+
 

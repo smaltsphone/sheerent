@@ -50,6 +50,7 @@ class Item(BaseModel):
     images: Optional[List[str]] = []  # ✅ 쉼표로 이어진 문자열
     locker_number: Optional[str] = None
     description: Optional[str] = None
+    damage_reported: bool = False
 
     class Config:
         orm_mode = True
@@ -96,6 +97,7 @@ class Rental(BaseModel):
     has_insurance: bool
     deducted_amount: int
     item: Optional[ItemForRental]
+    after_image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
