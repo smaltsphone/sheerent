@@ -1,0 +1,17 @@
+서버실행 -ip주소 확인
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+// db초기화
+python -m app.init_db
+
+앱 - ip주소 확인
+flutter run
+
+라즈베리
+python cam.py
+
+깃
+git add .
+git commit -m ""
+git push origin main
+git push origin master
