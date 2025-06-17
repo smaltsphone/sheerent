@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 
 const String apiBaseUrl = "https://sheerent-server.onrender.com";
-const String baseUrl = "http://220.89.229.236:8000";
+const String baseUrl = "http://IP:8000";
 
 final NumberFormat formatter = NumberFormat('#,##0', 'ko_KR');
 

@@ -76,33 +76,36 @@ class RentalDetailPage extends StatelessWidget {
                     try {
                       final unit = item['unit'];
                       final price = item['price_per_day'];
+                      final originalEndTime = rental['original_end_time'];
 
                       if (startTime != null && endTime != null && price != null) {
                         final start = DateTime.parse(startTime);
                         final end = DateTime.parse(endTime);
-                        final totalMinutes = end.difference(start).inMinutes;
-                        int totalHours = (totalMinutes / 60).ceil();
+                        final originalEnd = originalEndTime != null
+                            ? DateTime.parse(originalEndTime)
+                            : end;  // ✅ original이 없으면 전체를 기본 요금 처리
 
+                        int baseHours = (originalEnd.difference(start).inSeconds / 3600).ceil();
+                        int totalHours = (end.difference(start).inSeconds / 3600).ceil();
                         if (totalHours <= 0) totalHours = 1;
+                        if (baseHours <= 0) baseHours = totalHours;
 
-                        final int baseHours = unit == 'per_hour' ? 1 : 24;
-                        final int actualBaseHours = totalHours >= baseHours ? baseHours : totalHours;
-                        final int extensionHours = totalHours - actualBaseHours;
+                        final int extensionHours = totalHours - baseHours;
 
                         final int pricePerHour = unit == 'per_hour'
                             ? price
                             : (price / 24).round();
 
-                        final int basePrice = pricePerHour * actualBaseHours;
-                        final int extensionPrice = pricePerHour * extensionHours;
+                        final int basePrice = pricePerHour * baseHours;
+                        final int extensionPrice = pricePerHour * (extensionHours > 0 ? extensionHours : 0);
 
-                        final baseDays = actualBaseHours ~/ 24;
-                        final baseRemainHours = actualBaseHours % 24;
+                        // 기본/연장 시간 텍스트
+                        final baseDays = baseHours ~/ 24;
+                        final baseRemainHours = baseHours % 24;
                         String baseTimeText = '';
                         if (baseDays > 0) baseTimeText += '${baseDays}일 ';
                         if (baseRemainHours > 0) baseTimeText += '${baseRemainHours}시간';
                         if (baseTimeText.isEmpty) baseTimeText = '1시간';
-
                         final extensionDays = extensionHours ~/ 24;
                         final extensionRemainHours = extensionHours % 24;
                         String extensionTimeText = '';
@@ -113,18 +116,17 @@ class RentalDetailPage extends StatelessWidget {
                         final int insurance = hasInsurance ? ((basePrice + extensionPrice) * 0.05).round() : 0;
                         final int total = basePrice + extensionPrice + fee + insurance;
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("기본 요금 ($baseTimeText): ${formatter.format(basePrice)} P"),
-                            if (extensionHours > 0)
-                              Text("연장 요금 ($extensionTimeText): ${formatter.format(extensionPrice)} P"),
-                            Text("수수료 (5%): ${formatter.format(fee)} P"),
-                            if (hasInsurance)
-                              Text("보험료 (5%): ${formatter.format(insurance)} P"),
-                            const Divider(height: 20),
-                            Text("총 결제 금액: ${formatter.format(total)} P", style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
+                         return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("기본 요금 ($baseTimeText): ${formatter.format(basePrice)} P"),
+          Text("수수료 (5%): ${formatter.format(fee)} P"),
+          if (hasInsurance)
+            Text("보험료 (5%): ${formatter.format(insurance)} P"),
+          const Divider(height: 20),
+          Text("총 결제 금액: ${formatter.format(total)} P",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+        ],
                         );
                       } else {
                         return const Text("시간 또는 가격 정보 부족");
@@ -132,9 +134,9 @@ class RentalDetailPage extends StatelessWidget {
                     } catch (e) {
                       return const Text("❌ 결제 정보 계산 오류");
                     }
-                  }),
-                  const SizedBox(height: 16),
-                ],
+                  })
+                  ],
+
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

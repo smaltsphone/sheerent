@@ -134,7 +134,7 @@ def create_rental(rental: RentalCreate, db: Session = Depends(get_db)):
         damage_reported=False,
         deducted_amount=0,
     )
-
+    print(f"start_time: {start_time}, end_time: {end_time}")
     db.add(new_rental)
     db.commit()
     db.refresh(new_rental)

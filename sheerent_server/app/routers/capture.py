@@ -3,7 +3,7 @@ import requests
 
 router = APIRouter(prefix="/locker", tags=["locker"])
 
-RASPBERRY_PI_URL = "http://192.168.137.187:8000"
+RASPBERRY_PI_URL = "http://IP:8000"
 
 @router.get("/capture")
 def capture():
