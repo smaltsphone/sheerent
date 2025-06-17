@@ -80,7 +80,8 @@ class RentalDetailPage extends StatelessWidget {
                       if (startTime != null && endTime != null && price != null) {
                         final start = DateTime.parse(startTime);
                         final end = DateTime.parse(endTime);
-                        int totalHours = end.difference(start).inHours;
+                        final totalMinutes = end.difference(start).inMinutes;
+                        int totalHours = (totalMinutes / 60).ceil();
 
                         if (totalHours <= 0) totalHours = 1;
 
@@ -250,7 +251,7 @@ class RentalDetailPage extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("✅ 대여 기록이 삭제되었습니다")),
                             );
-                            Navigator.pop(context);
+                            Navigator.pop(context, true);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("❌ 삭제 실패")),

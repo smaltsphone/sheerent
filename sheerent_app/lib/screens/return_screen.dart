@@ -107,25 +107,25 @@ Future<bool> fetchInsuranceStatus(int rentalId) async {
     });
   }
 
-  Future<void> extendRental(int rentalId, int amount, String unit, bool hasInsurance) async {
-    final url = Uri.parse(
-  "$baseUrl/rentals/$rentalId/extend?$unit=$amount&has_insurance=${insuranceSelected.toString()}");
-    final response = await http.put(url);
+Future<void> extendRental(int rentalId, int amount, String unit, bool hasInsurance) async {
+  final url = Uri.parse(
+    "$baseUrl/rentals/$rentalId/extend?$unit=$amount&has_insurance=${hasInsurance.toString()}");
+  final response = await http.put(url);
 
-    if (response.statusCode == 200) {
-      final data = json.decode(utf8.decode(response.bodyBytes));
-      final deducted = data['deducted_point'];
-      final msg = "✅ 대여 기간이 연장되었습니다. 차감: ${formatter.format(deducted)} P";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
-      fetchRentedItems();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ 연장 실패")),
-      );
-    }
+  if (response.statusCode == 200) {
+    final data = json.decode(utf8.decode(response.bodyBytes));
+    final deducted = data['deducted_point'];
+    final msg = "✅ 대여 기간이 연장되었습니다. 차감: ${formatter.format(deducted)} P";
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+    fetchRentedItems();
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("❌ 연장 실패")),
+    );
   }
+}
 
   Future<void> payLateFee(int rentalId) async {
     final url = Uri.parse("$baseUrl/rentals/$rentalId/pay_late_fee");

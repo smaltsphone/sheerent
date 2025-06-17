@@ -120,14 +120,18 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RentalDetailPage(rental: rental),
-                            ),
-                          );
-                        },
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RentalDetailPage(rental: rental),
+                          ),
+                        );
+
+                        if (result == true) {
+                          fetchRentalHistory(); // 삭제 후 새로고침
+                        }
+                      },
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Row(
